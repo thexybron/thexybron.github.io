@@ -1,0 +1,45 @@
+name: Cloud Unzip
+
+on:
+  workflow_dispatch:
+
+# 1. CRITICAL: Grant write permissions so the runner can push changes back to the repo
+permissions:
+  contents: write
+
+jobs:
+  unzip_process:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. DEBUG & EXTRACT: Safely check for files before attempting extraction
+      - name: Extract Zip Archive
+        run: |
+          echo "Checking directory contents..."
+          ls -la
+          
+          # Check if any zip files exist in the directory
+          if ls *.zip 1> /dev/null 2>&1; then
+            echo "Zip files found. Unzipping..."
+            unzip -o "*.zip"
+            rm *.zip
+          else
+            echo "❌ ERROR: No .zip files found in the root directory!"
+            exit 1
+          fi
+
+      - name: Save Changes to Repository
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          
+          # Only commit if changes actually exist to prevent "nothing to commit" crashes
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Extracted bulk files via cloud action"
+            git push
+          fi
